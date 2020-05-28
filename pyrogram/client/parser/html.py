@@ -111,11 +111,11 @@ class HTML:
         self.client = client
 
     def parse(self, text: str):
-        text = utils.add_surrogates(text)
-
         parser = Parser(self.client)
-        parser.feed(text)
+        parser.feed(utils.add_surrogates(text))
         parser.close()
+
+        message = utils.remove_surrogates(parser.text)
 
         if parser.tag_entities:
             unclosed_tags = []
@@ -135,11 +135,15 @@ class HTML:
                 except PeerIdInvalid:
                     continue
 
+            # In case entities close at the end of the whole text message
+            if entity.offset + entity.length == len(message):
+                entity.length -= 1
+
             entities.append(entity)
 
         # TODO: OrderedDict to be removed in Python 3.6
         return OrderedDict([
-            ("message", utils.remove_surrogates(parser.text)),
+            ("message", message),
             ("entities", sorted(entities, key=lambda e: e.offset))
         ])
 
